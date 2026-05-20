@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>财智未来 | 全功能AI+财经平台（实战面试/经营报表/测试/私教）</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mammoth@1.4.2/mammoth.browser.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #f0f4f9; color: #0f172a; height: 100vh; overflow: hidden; }
+        .app { display: flex; height: 100vh; }
+        .sidebar {
+            width: 280px;
+            background: rgba(255,255,255,0.96);
+            backdrop-filter: blur(12px);
+            border-right: 1px solid rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            padding: 24px 20px;
+            z-index: 10;
+            overflow-y: auto;
+        }
+        .logo { font-size: 1.5rem; font-weight: 800; margin-bottom: 32px; background: linear-gradient(135deg, #1E3C5C, #2B5F8A); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .nav-item { display: flex; align-items: center; gap: 14px; padding: 12px 16px; margin: 4px 0; border-radius: 28px; cursor: pointer; transition: 0.2s; color: #334155; font-weight: 500; }
+        .nav-item i { width: 24px; font-size: 1.2rem; }
+        .nav-item.active { background: #1e3c5c; color: white; }
+        .nav-item:hover:not(.active) { background: #eef2f6; }
+        .xp-stats { margin-top: auto; background: #eef3fa; border-radius: 28px; padding: 16px; text-align: center; }
+        .progress-bar-sm { height: 6px; background: #dce5ec; border-radius: 10px; margin: 8px 0; }
+        .progress-fill-sm { width: 0%; height: 6px; background: #1e3c5c; border-radius: 10px; }
+        .reset-xp-btn { background: #b91c1c; margin-top: 10px; width: 100%; }
+        .main { flex: 1; overflow-y: auto; padding: 24px 32px; }
+        .card { background: white; border-radius: 32px; padding: 28px; margin-bottom: 28px; box-shadow: 0 8px 20px rgba(0,0,0,0.03); }
+        .card-header { display: flex; align-items: center; gap: 12px; border-bottom: 2px solid #eef2f6; padding-bottom: 16px; margin-bottom: 20px; }
+        .card-header i { font-size: 28px; color: #2c7da0; }
+        .card-header h2 { font-size: 1.4rem; font-weight: 600; }
+        .btn-primary, .btn-reset, .btn-danger { background: #1e3c5c; color: white; border: none; padding: 10px 24px; border-radius: 40px; font-weight: 600; cursor: pointer; transition: 0.1s; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-primary:hover, .btn-reset:hover, .btn-danger:hover { opacity: 0.9; transform: scale(0.98); }
+        .btn-reset { background: #5b7c9b; }
+        .btn-danger { background: #b91c1c; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .career-setup { display: flex; gap: 16px; margin-bottom: 24px; align-items: center; flex-wrap: wrap; }
+        .career-setup input { flex: 2; padding: 14px 20px; border-radius: 60px; border: 1px solid #cbdde9; font-size: 1rem; }
+        .milestone-steps { display: flex; justify-content: space-between; margin: 24px 0; gap: 12px; flex-wrap: wrap; }
+        .step { text-align: center; flex: 1; font-size: 0.8rem; font-weight: 600; padding: 10px 6px; border-radius: 30px; background: #eef2f6; }
+        .step.active { background: #2c7da0; color: white; box-shadow: 0 4px 10px rgba(44,125,160,0.2); }
+        .dashboard-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 20px; margin-bottom: 20px; }
+        .stat-card { background: #f8fafc; border-radius: 24px; padding: 16px; text-align: center; }
+        .stat-value { font-size: 1.5rem; font-weight: 700; color: #1e3c5c; }
+        .charts-row { display: flex; gap: 20px; margin: 20px 0; flex-wrap: wrap; }
+        .chart-box { flex: 1; background: #f8fafc; border-radius: 24px; padding: 16px; }
+        canvas { max-height: 250px; width: 100%; }
+        .financial-table { background: #f0f9ff; border-radius: 24px; padding: 20px; margin: 20px 0; overflow-x: auto; }
+        .financial-table table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .financial-table td, .financial-table th { padding: 8px; border: 1px solid #cbdde9; text-align: left; vertical-align: top; }
+        .financial-table input { width: 130px; padding: 6px; border-radius: 20px; border: 1px solid #cbdde9; }
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+        .calendar-weekday { text-align: center; font-weight: 600; padding: 10px; background: #eef2f6; border-radius: 24px; }
+        .calendar-day { background: #f8fafc; border-radius: 20px; padding: 10px; min-height: 90px; cursor: pointer; transition: 0.1s; position: relative; }
+        .calendar-day:hover { background: #eef3fa; transform: scale(1.02); }
+        .day-number { font-weight: 700; margin-bottom: 6px; font-size: 1rem; }
+        .task-dot { display: inline-block; width: 8px; height: 8px; background: #2c7da0; border-radius: 50%; margin: 2px; }
+        .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; }
+        .modal-content { background: white; width:90%; max-width:600px; border-radius:40px; padding:28px; overflow-y: auto; max-height: 85vh; }
+        .close-modal { float: right; font-size:28px; cursor: pointer; }
+        .test-option { background: #eef2f6; border: none; padding: 10px 24px; border-radius: 40px; margin: 6px; cursor: pointer; font-size: 0.9rem; }
+        .test-option.active { background: #2c7da0; color: white; }
+        .chat-fab, .settings-fab { position: fixed; bottom: 24px; width: 56px; height: 56px; border-radius: 30px; display: flex; align-items: center; justify-content: center; color: white; cursor: pointer; box-shadow: 0 6px 14px rgba(0,0,0,0.2); z-index: 200; }
+        .chat-fab { background: #1e3c5c; right: 90px; }
+        .settings-fab { background: #5b7c9b; right: 24px; }
+        .chat-window { position: fixed; bottom: 90px; right: 24px; width: 360px; height: 500px; background: white; border-radius: 32px; box-shadow: 0 20px 35px rgba(0,0,0,0.2); display: none; flex-direction: column; overflow: hidden; z-index: 200; }
+        .chat-window.open { display: flex; }
+        .chat-header { background: #1e3c5c; color: white; padding: 16px; font-weight: 600; }
+        .chat-msgs { flex: 1; overflow-y: auto; padding: 16px; background: #fafeff; }
+        .chat-input-area { display: flex; padding: 12px; gap: 8px; border-top: 1px solid #eef2f6; }
+        .chat-input-area input { flex: 1; padding: 10px 16px; border-radius: 40px; border: 1px solid #cbdde9; }
+        .settings-panel { position: fixed; bottom: 90px; right: 24px; width: 320px; background: white; border-radius: 28px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); display: none; z-index: 200; }
+        .settings-panel.open { display: block; }
+        .settings-panel input { width: 100%; padding: 10px; margin: 8px 0; border-radius: 40px; border: 1px solid #cbdde9; }
+        .hint-text { color: #5b7c9b; font-size: 0.75rem; margin-top: 8px; }
+        .option-btn.selected { background: #2c7da0 !important; color: white !important; }
+        @media (max-width:800px){ .sidebar{ width:80px; padding:20px 12px; } .nav-item span{ display:none; } }
+    </style>
+</head>
+<body>
+<div class="app">
+    <div class="sidebar">
+        <div class="logo"><i class="fas fa-chalkboard-user"></i> 财智未来</div>
+        <div class="nav-item active" data-view="dashboard"><i class="fas fa-tachometer-alt"></i><span>工作台</span></div>
+        <div class="nav-item" data-view="practice"><i class="fas fa-briefcase"></i><span>实战训练</span></div>
+        <div class="nav-item" data-view="careerTest"><i class="fas fa-clipboard-list"></i><span>职业测试</span></div>
+        <div class="nav-item" data-view="aiInterview"><i class="fas fa-microphone-alt"></i><span>AI面试官</span></div>
+        <div class="nav-item" data-view="skillTree"><i class="fas fa-code-branch"></i><span>技能树</span></div>
+        <div class="nav-item" data-view="aiPrivate"><i class="fas fa-robot"></i><span>AI私教</span></div>
+        <div class="nav-item" data-view="tasks"><i class="fas fa-calendar-alt"></i><span>任务日历</span></div>
+        <div class="xp-stats">
+            <div><i class="fas fa-star"></i> 总经验</div>
+            <strong id="sidebarXP">0</strong> / <span id="sidebarMax">10000</span>
+            <div class="progress-bar-sm"><div class="progress-fill-sm" id="sidebarProgressFill"></div></div>
+            <button id="resetGlobalXPBtn" class="btn-danger reset-xp-btn">🗑️ 清零经验</button>
+        </div>
+    </div>
+    <div class="main" id="mainContent">
+        <div id="dashboardView">
+            <div class="card">
+                <div class="card-header"><i class="fas fa-chart-line"></i><h2>可视化人生成就</h2></div>
+                <div class="career-setup"><input type="text" id="careerGoal" value="首席AI经济学家"><button id="genPathBtn" class="btn-primary">✨ 生成晋升路径</button></div>
+                <div id="milestoneSteps" class="milestone-steps"></div>
+                <div class="progress-bar-sm"><div class="progress-fill-sm" id="vizProgressFill"></div></div>
+                <div class="flex-between" style="margin-top:12px;"><span>当前经验 <strong id="vizXP">0</strong>/10000</span><span id="currentRoleLabel" style="font-weight:600;">当前职位：实习顾问</span></div>
+            </div>
+            <div class="card"><div class="card-header"><i class="fas fa-briefcase"></i><h2>推荐岗位</h2></div><div id="jobsContainer"></div><button id="refreshJobsBtn" class="btn-primary">🔄 换一批</button></div>
+        </div>
+        <div id="practiceView" style="display:none;"></div>
+        <div id="careerTestView" style="display:none;"></div>
+        <div id="aiInterviewView" style="display:none;"></div>
+        <div id="skillTreeView" style="display:none;"></div>
+        <div id="aiPrivateView" style="display:none;"></div>
+        <div id="tasksView" style="display:none;"></div>
+    </div>
+</div>
+<div class="chat-fab" id="chatFab"><i class="fas fa-robot"></i></div>
+<div class="settings-fab" id="settingsFab"><i class="fas fa-cog"></i></div>
+<div class="chat-window" id="chatWindow"><div class="chat-header">AI小助手</div><div class="chat-msgs" id="chatMsgs"><div>🤖 你好！我是你的AI财经助手。</div></div><div class="chat-input-area"><input id="chatInput" placeholder="提问..."><button id="sendChatMsgBtn" class="btn-primary">发送</button></div></div>
+<div class="settings-panel" id="settingsPanel"><h4>API配置</h4><label>DeepSeek API Key</label><input type="password" id="apiKeyInput" placeholder="sk-..."><button id="saveApiBtn" class="btn-primary" style="width:100%;">保存</button><p class="hint-text">获取Key: platform.deepseek.com</p></div>
+
+<script>
+    // ======================= 全局状态 =======================
+    let totalXP = 0, MAX_XP = 10000;
+    let milestones = ["实习顾问","初级分析师","高级分析师","财务经理","首席AI经济学家"];
+    let currentCareer = "首席AI经济学家";
+    let DEEPSEEK_KEY = localStorage.getItem('deepseek_key') || '';
+    
+    // 经验值UI更新
+    function updateUI() {
+        let percent = (totalXP/MAX_XP)*100;
+        if(document.getElementById('vizProgressFill')) document.getElementById('vizProgressFill').style.width = percent+'%';
+        if(document.getElementById('vizXP')) document.getElementById('vizXP').innerText = totalXP;
+        if(document.getElementById('sidebarXP')) document.getElementById('sidebarXP').innerText = totalXP;
+        if(document.getElementById('sidebarMax')) document.getElementById('sidebarMax').innerText = MAX_XP;
+        if(document.getElementById('sidebarProgressFill')) document.getElementById('sidebarProgressFill').style.width = percent+'%';
+        renderMilestones();
+        localStorage.setItem('fin_data', JSON.stringify({ totalXP, currentCareer, milestones }));
+    }
+    function renderMilestones() {
+        let container = document.getElementById('milestoneSteps');
+        if(!container) return;
+        let activeIndex = Math.floor((totalXP/MAX_XP) * milestones.length);
+        container.innerHTML = milestones.map((s,idx) => `<div class="step ${idx <= activeIndex ? 'active':''}">${s}</div>`).join('');
+        let currentRole = milestones[Math.min(milestones.length-1, activeIndex)];
+        if(document.getElementById('currentRoleLabel')) document.getElementById('currentRoleLabel').innerText = `当前职位：${currentRole}`;
+    }
+    function addXP(amount, reason) { totalXP = Math.min(MAX_XP, totalXP+amount); updateUI(); addChatMsg(`✨ +${amount} XP (${reason})`, false); }
+    function resetXP() { if(confirm("确定清零总经验值？")) { totalXP=0; updateUI(); addChatMsg("总经验值已清零", false); } }
+    document.getElementById('resetGlobalXPBtn')?.addEventListener('click', resetXP);
+    document.getElementById('genPathBtn')?.addEventListener('click', () => {
+        let goal = document.getElementById('careerGoal').value.trim();
+        if(goal) currentCareer = goal;
+        if(goal.includes("风控")) milestones = ["风控助理","风险建模","高级风控","风控总监","首席风险官"];
+        else if(goal.includes("量化")) milestones = ["量化开发","策略研究员","高级量化","量化总监","首席量化"];
+        else milestones = ["实习顾问","初级分析师","高级分析师","财务经理","首席AI经济学家"];
+        renderMilestones();
+        addChatMsg(`已生成「${currentCareer}」晋升路径`, false);
+        updateUI();
+    });
+    // 岗位推荐
+    const jobList = [
+        { title:"量化研究员", company:"Citadel Securities", skills:["Python","统计套利","机器学习"], salary:"40-60K" },
+        { title:"AI风控专家", company:"蚂蚁集团", skills:["信用评分","特征工程","SQL"], salary:"35-55K" },
+        { title:"金融数据科学家", company:"摩根大通", skills:["时序分析","Tableau","Python"], salary:"45-70K" },
+        { title:"审计科技顾问", company:"普华永道", skills:["数据分析","AI工具","财务知识"], salary:"30-50K" },
+        { title:"税务AI产品经理", company:"德勤", skills:["税务知识","产品设计","AI应用"], salary:"35-55K" }
+    ];
+    function getRandomJobs() { let arr = [...jobList]; for(let i=arr.length-1;i>0;i--){ let j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr.slice(0,4); }
+    let currentJobs = getRandomJobs();
+    function renderJobs() { let container = document.getElementById('jobsContainer'); if(container) container.innerHTML = currentJobs.map(j => `<div style="background:#f8fafc; border-radius:20px; padding:16px; margin-bottom:12px; border-left:4px solid #2c7da0;"><div style="font-weight:700;">${j.title}</div><div style="color:#5b7c9b; font-size:0.8rem;">${j.company} · ${j.salary}</div><div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;">${j.skills.map(s=>`<span style="background:#eef2f6; padding:2px 8px; border-radius:20px; font-size:0.7rem;">${s}</span>`).join('')}</div></div>`).join(''); }
+    document.getElementById('refreshJobsBtn')?.addEventListener('click', ()=>{ currentJobs=getRandomJobs(); renderJobs(); });
+    renderJobs();
+
+    // 视图切换
+    const views = ['dashboard','practice','careerTest','aiInterview','skillTree','aiPrivate','tasks'];
+    function showView(view) {
+        views.forEach(v => { let el = document.getElementById(v+'View'); if(el) el.style.display = 'none'; });
+        let target = document.getElementById(view+'View'); if(target) target.style.display = 'block';
+        document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+        let activeNav = document.querySelector(`.nav-item[data-view="${view}"]`);
+        if(activeNav) activeNav.classList.add('active');
+        if(view === 'practice') renderPractice();
+        if(view === 'careerTest') renderCareerTest();
+        if(view === 'aiInterview') renderAiInterview();
+        if(view === 'skillTree') renderSkillTree();
+        if(view === 'aiPrivate') renderAiPrivate();
+        if(view === 'tasks') renderTaskCalendar();
+    }
+    document.querySelectorAll('.nav-item').forEach(item => item.addEventListener('click', () => showView(item.dataset.view)));
+    showView('dashboard');
+
+    // ======================= 实战训练 (面试+经营, 修复全部交互) =======================
+    let interviewTimer = null;
+    let interviewScore = 0, companyLevel = "start";
+    let currentDirection = "finance";
+    const financeQuestions = [
+        { q:"如何用Python从上市公司年报中提取净利润并判断趋势？", options:["使用pandas读取CSV,计算同比","手动查找","用Excel公式","无法实现"], correct:0, score:20, hint:"使用pandas读取数据，计算同比或环比增长率。" },
+        { q:"在信用评分卡中，WOE和IV值的作用是什么？", options:["变量分箱和筛选","计算准确率","归一化","缺失值填充"], correct:0, score:20, hint:"WOE用于分箱编码，IV用于评估变量预测能力。" },
+        { q:"请简述LSTM在股票价格预测中的优势。", options:["处理长期依赖","计算速度快","可解释性强","不需要训练"], correct:0, score:20, hint:"LSTM擅长捕捉时间序列中的长期记忆。" },
+        { q:"如何使用机器学习识别财务报表舞弊？", options:["孤立森林异常检测","线性回归","K-means聚类","关联规则"], correct:0, score:20, hint:"无监督异常检测方法，如孤立森林。" },
+        { q:"你如何评估一个AI风控模型的业务效果？", options:["KS值/AUC","准确率","召回率","F1分数"], correct:0, score:20, hint:"KS和AUC是风控模型常用评估指标。" }
+    ];
+    const accountingQuestions = [
+        { q:"审计中，如何利用AI进行抽凭并发现异常？", options:["随机抽样+金额偏差检测","全量检查","依赖人工经验","无法自动化"], correct:0, score:20, hint:"Python随机抽样，结合规则检测金额异常。" },
+        { q:"合并报表时，内部交易抵消常出错，AI如何辅助？", options:["NLP识别交易描述自动生成分录","手动核对","Excel公式","忽略"], correct:0, score:20, hint:"自然语言处理解析交易摘要，自动匹配抵消。" },
+        { q:"如何用OCR和机器学习从发票中提取金额和税号？", options:["Tesseract+正则","手动输入","拍照存档","无法提取"], correct:0, score:20, hint:"OCR提取文字，正则表达式匹配字段。" },
+        { q:"银行对账自动化，你会使用什么工具？", options:["pandas merge或SQL join","手动对账","Excel vlookup","金蝶"], correct:0, score:20, hint:"pandas的merge或SQL的JOIN高效完成对账。" },
+        { q:"发现财务数据异常波动，如何用AI快速定位原因？", options:["孤立森林异常检测","线性回归","决策树","聚类"], correct:0, score:20, hint:"无监督异常检测算法可快速标记可疑数据。" }
+    ];
+    let currentQuestions = financeQuestions, currentQIndex = 0, selectedAnswers = [], timeLeft = 60;
+    function stopInterviewTimer() { if(interviewTimer) { clearInterval(interviewTimer); interviewTimer = null; } }
+    function startInterview(direction) {
+        stopInterviewTimer();
+        currentDirection = direction;
+        currentQuestions = direction === "finance" ? financeQuestions : accountingQuestions;
+        currentQIndex = 0;
+        selectedAnswers = [];
+        interviewScore = 0;
+        showInterviewQuestion();
+    }
+    function showInterviewQuestion() {
+        stopInterviewTimer();
+        timeLeft = 60;
+        let q = currentQuestions[currentQIndex];
+        let container = document.getElementById('interviewContainer');
+        if(!container) return;
+        let optionsHtml = "";
+        for(let i=0; i<q.options.length; i++) optionsHtml += `<button class="option-btn" data-opt="${i}" style="background:#eef2f6; border:none; padding:10px 20px; border-radius:40px; cursor:pointer; margin:6px;">${q.options[i]}</button>`;
+        container.innerHTML = `<div style="background:#f9fbfd; border-radius:28px; padding:24px;">
+            <div class="flex-between"><h3>${currentDirection==="finance"?"金融方向":"会计方向"}面试 (${currentQIndex+1}/${currentQuestions.length})</h3><div>⏱️ <span id="timerDisplay">60</span>秒</div></div>
+            <div style="margin:20px 0; font-size:1rem;">${q.q}</div>
+            <div id="optionsArea">${optionsHtml}</div>
+            <div class="hint-text">💡 提示：${q.hint}</div>
+            <button id="nextQuestionBtn" class="btn-primary" style="margin-top:20px;">下一题</button>
+        </div>`;
+        // 绑定选项点击
+        document.querySelectorAll('#optionsArea .option-btn').forEach(btn => {
+            btn.onclick = (e) => {
+                document.querySelectorAll('#optionsArea .option-btn').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                selectedAnswers[currentQIndex] = parseInt(btn.dataset.opt);
+            };
+        });
+        // 下一题按钮
+        const nextBtn = document.getElementById('nextQuestionBtn');
+        nextBtn.onclick = () => {
+            if(selectedAnswers[currentQIndex] === undefined) { alert("请选择一个答案"); return; }
+            if(selectedAnswers[currentQIndex] === q.correct) interviewScore += q.score;
+            if(currentQIndex+1 < currentQuestions.length) { currentQIndex++; showInterviewQuestion(); }
+            else endInterview();
+        };
+        // 计时器
+        interviewTimer = setInterval(() => {
+            if(timeLeft <= 0) {
+                clearInterval(interviewTimer);
+                interviewTimer = null;
+                alert("时间到！自动提交本题");
+                if(selectedAnswers[currentQIndex] === undefined) { /* 未选不得分 */ }
+                else if(selectedAnswers[currentQIndex] === q.correct) interviewScore += q.score;
+                if(currentQIndex+1 < currentQuestions.length) { currentQIndex++; showInterviewQuestion(); }
+                else endInterview();
+            } else {
+                timeLeft--;
+                let span = document.getElementById('timerDisplay');
+                if(span) span.innerText = timeLeft;
+            }
+        }, 1000);
+    }
+    function endInterview() {
+        stopInterviewTimer();
+        let level = interviewScore >= 80 ? "peak" : (interviewScore >= 60 ? "soar" : (interviewScore >= 40 ? "rising" : "start"));
+        companyLevel = level;
+        let levelNames = { start:"起步公司 - 启航财务咨询", rising:"新秀公司 - 星火会计师事务", soar:"腾飞公司 - 凌云投资集团", peak:"登峰公司 - 巅峰国际金融控股" };
+        let container = document.getElementById('interviewContainer');
+        if(container) container.innerHTML = `<div style="background:#eef3fa; border-radius:28px; padding:24px;"><h3>面试得分: ${interviewScore}/100</h3><p>您获得公司评级: ${levelNames[level]}</p><button id="enterCompanyBtn" class="btn-primary">🚀 进入公司模拟</button><div class="hint-text">💡 评级越高，初始资金和声誉越高</div></div>`;
+        let enterBtn = document.getElementById('enterCompanyBtn');
+        if(enterBtn) enterBtn.onclick = () => { initCompany(level); startSimulation(); };
+    }
+    
+    // 公司经营数据
+    let companyData = {
+        funds:0, reputation:50, stockPrice:100,
+        inventory: { qty:800, unitCost:45, total:36000 },
+        accountsReceivable:0, accountsPayable:0, debt:100000,
+        profitHistory:[], stockHistory:[]
+    };
+    let gameActive = false, waitingFinancial = false, waitingEvent = false, gameLogs = [];
+    let currentMonth = 1, dayCounter = 1;
+    let stockChart = null, profitChart = null;
+    const companyLevels = {
+        start: { funds:300000, rep:40, stock:80, inventoryQty:500, ar:60000, ap:40000, debt:150000 },
+        rising: { funds:500000, rep:60, stock:100, inventoryQty:800, ar:120000, ap:70000, debt:120000 },
+        soar: { funds:800000, rep:75, stock:130, inventoryQty:1200, ar:200000, ap:100000, debt:80000 },
+        peak: { funds:1200000, rep:90, stock:180, inventoryQty:2000, ar:350000, ap:150000, debt:50000 }
+    };
+    function initCompany(level) {
+        let cfg = companyLevels[level];
+        companyData.funds = cfg.funds;
+        companyData.reputation = cfg.rep;
+        companyData.stockPrice = cfg.stock;
+        companyData.inventory = { qty: cfg.inventoryQty, unitCost: 45, total: cfg.inventoryQty*45 };
+        companyData.accountsReceivable = cfg.ar;
+        companyData.accountsPayable = cfg.ap;
+        companyData.debt = cfg.debt;
+        companyData.profitHistory = [];
+        companyData.stockHistory = [cfg.stock];
+        currentMonth = 1; dayCounter = 1; waitingFinancial = false; waitingEvent = false; gameLogs = [];
+        updateCompanyUI(); drawCompanyCharts();
+    }
+    function updateCompanyUI() {
+        if(document.getElementById('companyFunds')) document.getElementById('companyFunds').innerText = companyData.funds.toLocaleString();
+        if(document.getElementById('companyRep')) document.getElementById('companyRep').innerText = companyData.reputation;
+        if(document.getElementById('companyStock')) document.getElementById('companyStock').innerText = companyData.stockPrice;
+        if(document.getElementById('companyDebt')) document.getElementById('companyDebt').innerText = companyData.debt.toLocaleString();
+        let invDiv = document.getElementById('companyInventory');
+        if(invDiv) invDiv.innerHTML = `📦 存货: ${companyData.inventory.qty}件 单价¥${companyData.inventory.unitCost} 总额¥${companyData.inventory.total.toLocaleString()} | 应收: ¥${companyData.accountsReceivable.toLocaleString()} | 应付: ¥${companyData.accountsPayable.toLocaleString()}`;
+        drawCompanyCharts();
+    }
+    function drawCompanyCharts() {
+        const stockCtx = document.getElementById('stockCanvas')?.getContext('2d');
+        const profitCtx = document.getElementById('profitCanvas')?.getContext('2d');
+        if(stockCtx && companyData.stockHistory.length) { if(stockChart) stockChart.destroy(); stockChart = new Chart(stockCtx, { type: 'line', data: { labels: companyData.stockHistory.map((_,i)=>i+1), datasets: [{ label: '股价 (¥)', data: companyData.stockHistory, borderColor: '#2c7da0', tension: 0.3 }] }, options: { responsive: true } }); }
+        if(profitCtx && companyData.profitHistory.length) { if(profitChart) profitChart.destroy(); profitChart = new Chart(profitCtx, { type: 'line', data: { labels: companyData.profitHistory.map((_,i)=>i+1), datasets: [{ label: '月度利润 (¥)', data: companyData.profitHistory, borderColor: '#e67e22', tension: 0.3 }] }, options: { responsive: true } }); }
+    }
+    const dailyTasksPool = [{ name:"用Python分析应收账款账龄", xp:15, funds:8000, rep:2, arDelta:-5000 },{ name:"训练信用评分卡模型(AUC>0.75)", xp:20, funds:12000, rep:3, apDelta:-3000 },{ name:"撰写AI投资策略周报", xp:12, funds:6000, rep:1, arDelta:2000 },{ name:"使用SQL提取销售数据异常", xp:10, funds:5000, rep:1, arDelta:-2000 }];
+    function refreshDailyTask() {
+        let task = dailyTasksPool[Math.floor(Math.random()*dailyTasksPool.length)];
+        let descDiv = document.getElementById('dailyTaskDesc');
+        if(descDiv) descDiv.innerHTML = `今日任务：${task.name}`;
+        let btn = document.getElementById('dailyTaskBtn');
+        if(btn) {
+            btn.onclick = () => { 
+                if(!gameActive || waitingFinancial) return;
+                companyData.funds += task.funds; 
+                companyData.reputation = Math.min(100, companyData.reputation+task.rep);
+                companyData.stockPrice = Math.floor(companyData.stockPrice * (1 + task.rep/50));
+                companyData.stockHistory.push(companyData.stockPrice);
+                if(task.arDelta) companyData.accountsReceivable = Math.max(0, companyData.accountsReceivable + task.arDelta);
+                if(task.apDelta) companyData.accountsPayable = Math.max(0, companyData.accountsPayable + task.apDelta);
+                addXP(task.xp, task.name);
+                updateCompanyUI(); addGameLog(`✅ 完成任务：${task.name}，资金+${task.funds}，声誉+${task.rep}`);
+                btn.disabled = true;
+                drawCompanyCharts();
+            };
+            btn.disabled = false;
+        }
+    }
+    function addGameLog(msg) { gameLogs.unshift(msg); if(gameLogs.length>20) gameLogs.pop(); let logDiv=document.getElementById('gameLog'); if(logDiv) logDiv.innerHTML=gameLogs.map(l=>`<div>${l}</div>`).join(''); }
+    const randomEvents = [
+        { name:"📈 市场波动", desc:"股市突然下跌，客户撤资。", options: [ { text:"紧急风险对冲", effect:{ funds:-30000, rep:+10, xp:15, ar:-10000 } }, { text:"保持观望", effect:{ funds:-10000, rep:0, xp:5, ar:-5000 } }, { text:"恐慌抛售", effect:{ funds:-80000, rep:-15, xp:0, ar:-20000, ap:5000 } } ] },
+        { name:"📊 财务造假发现", desc:"子公司疑似虚增收入。", options: [ { text:"立即上报审计委员会", effect:{ funds:0, rep:+15, xp:30, ar:0, ap:-10000 } }, { text:"内部提醒", effect:{ funds:-5000, rep:-5, xp:10 } }, { text:"隐瞒不报", effect:{ funds:30000, rep:-25, xp:0, ar:15000, ap:5000 } } ] }
+    ];
+    function triggerRandomEvent() { if(!gameActive || waitingFinancial) return; let event = randomEvents[Math.floor(Math.random()*randomEvents.length)]; waitingEvent = true; let eventDiv=document.getElementById('eventDesc'); let choicesDiv=document.getElementById('eventChoices'); if(eventDiv) eventDiv.innerHTML = `<i class="fas fa-bolt"></i> ${event.name}<br>${event.desc}`; if(choicesDiv) choicesDiv.innerHTML = event.options.map((opt,idx)=>`<button class="choice-btn" data-choice="${idx}" style="background:#eef2f6; border:none; padding:8px 16px; border-radius:30px; margin:6px;">${opt.text}</button>`).join(''); document.querySelectorAll('.choice-btn').forEach(btn => { btn.onclick = () => { let idx = parseInt(btn.dataset.choice); let choice = event.options[idx]; companyData.funds += choice.effect.funds; companyData.reputation = Math.min(100, Math.max(0, companyData.reputation+choice.effect.rep)); if(choice.effect.ar) companyData.accountsReceivable = Math.max(0, companyData.accountsReceivable + choice.effect.ar); if(choice.effect.ap) companyData.accountsPayable = Math.max(0, companyData.accountsPayable + choice.effect.ap); addXP(choice.effect.xp || 0, `${event.name}: ${choice.text}`); addGameLog(`📢 ${event.name} → ${choice.text}`); updateCompanyUI(); waitingEvent = false; if(choicesDiv) choicesDiv.innerHTML = ''; if(eventDiv) eventDiv.innerHTML = '等待下一天...'; }; }); }
+    function showFinancialReport() {
+        waitingFinancial = true;
+        const reportType = Math.floor(Math.random() * 3);
+        const month = currentMonth;
+        const invTotal = companyData.inventory.total, ar = companyData.accountsReceivable, ap = companyData.accountsPayable, cash = companyData.funds, debt = companyData.debt;
+        const salesRevenue = Math.floor(80000 + Math.random() * 70000 + companyData.reputation * 500);
+        const costOfGoodsSold = Math.floor(salesRevenue * 0.55);
+        const operatingExpenses = Math.floor(15000 + Math.random() * 25000);
+        const interestExpense = Math.floor(debt * 0.008);
+        const netProfit = salesRevenue - costOfGoodsSold - operatingExpenses - interestExpense;
+        const cashFromOps = netProfit + 5000 + (Math.random() * 20000);
+        const cashFromInvest = -Math.floor(Math.random() * 30000);
+        const cashFromFin = Math.random() > 0.5 ? 10000 : -5000;
+        const netCashFlow = cashFromOps + cashFromInvest + cashFromFin;
+        let formHtml = `<div class="financial-table"><h3>📋 月末财务报表 (${month}月) - 中文版</h3>`;
+        let correctValues = {};
+        if (reportType === 0) {
+            formHtml += `<p><strong>资产负债表</strong> (单位：元)</p><table><tr><th>资产</th><th>期末余额</th><th>负债及所有者权益</th><th>期末余额</th></tr>`;
+            const totalAssets = cash + ar + invTotal;
+            const totalLiabEquity = ap + debt + (totalAssets - ap - debt);
+            formHtml += `<tr><td>货币资金</td><td>${cash.toFixed(0)}</td><td>应付账款</td><td>${ap.toFixed(0)}</td></tr>`;
+            formHtml += `<tr><td>应收账款</td><td>${ar.toFixed(0)}</td><td>长期负债</td><td>${debt.toFixed(0)}</td></tr>`;
+            formHtml += `<tr><td>存货</td><td><input type="number" id="fiInventory" placeholder="填写存货"></td><td>所有者权益</td><td><input type="number" id="fiEquity" placeholder="填写权益"></td></tr>`;
+            correctValues.fiInventory = invTotal; correctValues.fiEquity = totalAssets - ap - debt;
+            formHtml += `<tr><td><strong>资产总计</strong></td><td>${totalAssets.toFixed(0)}</td><td><strong>负债及权益总计</strong></td><td>${totalAssets.toFixed(0)}</td></tr>`;
+            formHtml += `</table><p class="hint-text">请填写存货和所有者权益（依据会计恒等式）</p>`;
+        } else if (reportType === 1) {
+            formHtml += `<p><strong>利润表</strong> (${month}月)</p><table><tr><th>项目</th><th>本月金额</th><th>用户填写</th></tr>`;
+            formHtml += `<tr><td>营业收入</td><td>${salesRevenue.toFixed(0)}</td><td>-</td></tr>`;
+            formHtml += `<tr><td>减：营业成本</td><td>${costOfGoodsSold.toFixed(0)}</td><td>-</td></tr>`;
+            formHtml += `<tr><td>营业费用</td><td>${operatingExpenses.toFixed(0)}</td><td>-</td></tr>`;
+            formHtml += `<tr><td>利息费用</td><td>${interestExpense.toFixed(0)}</td><td>-</td></tr>`;
+            formHtml += `<tr><td><strong>净利润</strong></td><td><input type="number" id="fiNetProfit" placeholder="填写净利润"></td><td>${netProfit.toFixed(0)}</td></tr>`;
+            formHtml += `</table>`;
+            correctValues.fiNetProfit = netProfit;
+        } else {
+            formHtml += `<p><strong>现金流量表</strong> (${month}月)</p><table><tr><th>项目</th><th>金额</th><th>用户填写</th></tr>`;
+            formHtml += `<tr><td>经营活动现金流量净额</td><td>${cashFromOps.toFixed(0)}</td><td>-</td></tr>`;
+            formHtml += `<tr><td>投资活动现金流量净额</td><td>${cashFromInvest.toFixed(0)}</td><td>-</td></tr>`;
+            formHtml += `<tr><td>筹资活动现金流量净额</td><td>${cashFromFin.toFixed(0)}</td><td>-</td></tr>`;
+            formHtml += `<tr><td><strong>现金净增加额</strong></td><td><input type="number" id="fiNetCash" placeholder="填写净增加额"></td><td>${netCashFlow.toFixed(0)}</td></tr>`;
+            formHtml += `</table>`;
+            correctValues.fiNetCash = netCashFlow;
+        }
+        formHtml += `<button id="submitFinancialBtn" class="btn-primary">提交报表</button><div id="financialFeedback" style="margin-top:12px;"></div></div>`;
+        let container = document.getElementById('gamePlayArea');
+        if(container) {
+            let old = container.querySelector('.financial-table');
+            if(old) old.remove();
+            let div = document.createElement('div'); div.innerHTML = formHtml;
+            container.insertBefore(div.firstChild, document.getElementById('dailyTaskCard'));
+            document.getElementById('submitFinancialBtn').onclick = () => {
+                let bonus=0, repBonus=0, xpBonus=0;
+                if(reportType === 0) {
+                    let userInv = parseFloat(document.getElementById('fiInventory')?.value);
+                    let userEq = parseFloat(document.getElementById('fiEquity')?.value);
+                    if(Math.abs(userInv - correctValues.fiInventory) < 300 && Math.abs(userEq - correctValues.fiEquity) < 500) { bonus=70000; repBonus=12; xpBonus=35; addGameLog("🏆 资产负债表优秀！"); }
+                    else if(Math.abs(userInv - correctValues.fiInventory) < 800 || Math.abs(userEq - correctValues.fiEquity) < 1000) { bonus=30000; repBonus=5; xpBonus=15; addGameLog("📊 资产负债表部分正确"); }
+                    else { bonus=-15000; repBonus=-5; addGameLog("❌ 资产负债表偏差较大"); }
+                } else if(reportType === 1) {
+                    let userProfit = parseFloat(document.getElementById('fiNetProfit')?.value);
+                    if(Math.abs(userProfit - correctValues.fiNetProfit) < 3000) { bonus=80000; repBonus=15; xpBonus=40; addGameLog("🏆 利润表精准！"); }
+                    else if(Math.abs(userProfit - correctValues.fiNetProfit) < 8000) { bonus=35000; repBonus=6; xpBonus=20; addGameLog("📈 利润表接近"); }
+                    else { bonus=-20000; repBonus=-8; addGameLog("❌ 利润表错误较多"); }
+                } else {
+                    let userCash = parseFloat(document.getElementById('fiNetCash')?.value);
+                    if(Math.abs(userCash - correctValues.fiNetCash) < 5000) { bonus=75000; repBonus=14; xpBonus=38; addGameLog("🏆 现金流量表准确"); }
+                    else if(Math.abs(userCash - correctValues.fiNetCash) < 12000) { bonus=30000; repBonus=5; xpBonus=18; addGameLog("💧 现金流量表部分正确"); }
+                    else { bonus=-18000; repBonus=-6; addGameLog("❌ 现金流量表错误"); }
+                }
+                companyData.funds += bonus; companyData.reputation = Math.min(100, Math.max(0, companyData.reputation+repBonus));
+                if(xpBonus>0) addXP(xpBonus, `月度报表-${reportType===0?"资产负债表":reportType===1?"利润表":"现金流量表"}`);
+                if(reportType===1 && !isNaN(correctValues.fiNetProfit)) companyData.profitHistory.push(correctValues.fiNetProfit);
+                else if(reportType===0) companyData.profitHistory.push(netProfit);
+                updateCompanyUI(); waitingFinancial = false;
+                container.querySelector('.financial-table')?.remove();
+                addGameLog(`📊 报表提交完成，资金变动: ${bonus>0?'+':''}${bonus}`);
+                refreshDailyTask();
+            };
+        }
+    }
+    function nextDay() { if(!gameActive || waitingFinancial || waitingEvent) { if(waitingFinancial) addGameLog("请先完成本月财务报表！"); else if(waitingEvent) addGameLog("请先处理突发事件！"); return; } dayCounter++; if(dayCounter % 10 === 0) { if(currentMonth > 1) showFinancialReport(); else triggerRandomEvent(); updateCompanyUI(); return; } refreshDailyTask(); updateCompanyUI(); addGameLog(`📅 进入第 ${dayCounter} 天`); }
+    function startSimulation() { let setup=document.getElementById('gameSetup'); let play=document.getElementById('gamePlayArea'); if(setup) setup.style.display='none'; if(play) play.style.display='block'; gameActive=true; refreshDailyTask(); updateCompanyUI(); addGameLog(`🎉 入职成功，开始模拟经营`); }
+    function endGame() { gameActive=false; let setup=document.getElementById('gameSetup'); let play=document.getElementById('gamePlayArea'); if(setup) setup.style.display='block'; if(play) play.style.display='none'; addGameLog("实习结束，感谢参与！"); }
+    function renderPractice() {
+        let container = document.getElementById('practiceView');
+        container.innerHTML = `<h2>实战训练 · AI模拟面试+沙盘经营（动态中文三大报表）</h2><div class="card"><div id="gameSetup"><h3>第一步：选择面试方向</h3><button id="financeBtn" class="btn-primary">🏦 金融方向</button><button id="accountingBtn" class="btn-primary">📊 会计方向</button><div id="interviewContainer" style="margin-top:20px;"></div></div><div id="gamePlayArea" style="display:none;"><div class="dashboard-stats"><div class="stat-card">💰 现金<br><span class="stat-value" id="companyFunds">0</span></div><div class="stat-card">📈 声誉<br><span class="stat-value" id="companyRep">0</span></div><div class="stat-card">💹 股价<br><span class="stat-value" id="companyStock">0</span></div><div class="stat-card">🏦 负债<br><span class="stat-value" id="companyDebt">0</span></div></div><div class="charts-row"><div class="chart-box"><canvas id="stockCanvas"></canvas><div class="hint-text">股价走势</div></div><div class="chart-box"><canvas id="profitCanvas"></canvas><div class="hint-text">月度利润趋势</div></div></div><div id="companyInventory" style="margin:10px 0; background:#f0f4fa; padding:8px; border-radius:20px;"></div><div id="dailyTaskCard" style="background:#fefce8; border-radius:20px; padding:16px; margin:16px 0;"><strong>今日AI+财经任务</strong><div id="dailyTaskDesc"></div><button id="dailyTaskBtn" class="btn-primary">✅ 完成任务</button></div><div id="eventDesc" style="background:#fff8e7; border-radius:20px; padding:12px; margin:12px 0;">等待事件...</div><div id="eventChoices"></div><div style="display:flex; gap:12px; margin:16px 0;"><button id="nextDayBtn" class="btn-primary">⏩ 下一天</button><button id="endGameBtn" class="btn-danger">🏁 结束实习</button></div><div class="game-log" id="gameLog" style="background:#f1f5f9; border-radius:20px; padding:12px; height:150px; overflow-y:auto; font-size:0.75rem;"></div><div class="hint-text">💡 每10天触发一次事件或月末财务报表（存货/应收/应付/负债动态变化）。</div></div></div>`;
+        document.getElementById('financeBtn').onclick = () => startInterview("finance");
+        document.getElementById('accountingBtn').onclick = () => startInterview("accounting");
+        document.getElementById('nextDayBtn').onclick = nextDay;
+        document.getElementById('endGameBtn').onclick = endGame;
+    }
+
+    // ======================= 职业测试（完整版） =======================
+    let testAnswers = {}, currentTestIdx = 0;
+    const testModules = {
+        0: { name:"霍兰德职业兴趣", questions:["我喜欢分析金融数据","我喜欢用Python解决财务问题","我喜欢领导团队","我擅长财务报表","我喜欢创造新产品","我喜欢数据可视化","我思考宏观经济","我对AI技术好奇"], optionsType:"scale", resultMap:(sum)=> sum>30 ? "研究型/企业型" : "常规型/社会型" },
+        1: { name:"MBTI", questions:["精力来源 (E外向/I内向)","信息获取 (S实感/N直觉)","决策方式 (T思考/F情感)","生活态度 (J判断/P感知)"], options:[["E","I"],["S","N"],["T","F"],["J","P"]], optionsType:"choice", resultMap:(arr)=> `您的MBTI类型: ${arr.join('')}` },
+        2: { name:"职业锚", questions:["技术专家","管理他人","自由自主","创业","社会贡献","挑战难题","平衡家庭","行业权威"], optionsType:"scale", resultMap:(sum)=> sum>25 ? "技术/管理复合型" : "稳定型" },
+        3: { name:"DISC行为风格", questions:["推动行动 (D)","影响他人 (I)","稳定支持 (S)","精确分析 (C)"], options:[["D"],["I"],["S"],["C"]], optionsType:"choice", resultMap:(arr)=> `主导行为风格: ${arr[0]}` },
+        4: { name:"盖洛普优势", questions:["执行力","影响力","关系建立","战略思维"], optionsType:"scale", resultMap:(sum)=> sum>12 ? "战略/影响力" : "执行力/关系" }
+    };
+    function renderCareerTest() {
+        let container = document.getElementById('careerTestView');
+        container.innerHTML = `<h2>五大权威职业测试 <button id="resetCareerTestBtn" class="btn-reset">🗑️ 重置</button></h2><div class="card"><div id="testTabs" style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px;">${Object.keys(testModules).map(i=>`<button class="btn-primary" data-test="${i}">${testModules[i].name}</button>`).join('')}</div><div id="testPanel"></div><button id="submitTestBtn" class="btn-primary">提交测评</button><div id="testResultMsg" style="margin-top:16px; padding:12px; background:#eef3fa; border-radius:24px;"></div></div>`;
+        function loadTest(idx) {
+            currentTestIdx = idx;
+            let mod = testModules[idx];
+            let html = `<h3>${mod.name}测评</h3>`;
+            mod.questions.forEach((q, i) => {
+                html += `<div style="margin-bottom:20px;"><p>${i+1}. ${q}</p><div class="options" data-qidx="${i}" style="display:flex; flex-wrap:wrap; gap:10px;">`;
+                if(mod.optionsType === "choice") {
+                    mod.options[i].forEach(opt => html+=`<button data-val="${opt}" class="test-option">${opt}</button>`);
+                } else {
+                    for(let v=1;v<=5;v++) html+=`<button data-val="${v}" class="test-option">${v}</button>`;
+                }
+                html+=`</div></div>`;
+            });
+            document.getElementById('testPanel').innerHTML = html;
+            document.querySelectorAll('.test-option').forEach(btn => {
+                btn.onclick = function() {
+                    this.closest('.options').querySelectorAll('.test-option').forEach(b=>b.classList.remove('active'));
+                    this.classList.add('active');
+                    let qidx = parseInt(this.closest('.options').dataset.qidx);
+                    if(!testAnswers[idx]) testAnswers[idx]=[];
+                    testAnswers[idx][qidx] = this.dataset.val;
+                };
+            });
+            if(testAnswers[idx]) {
+                testAnswers[idx].forEach((val, qi) => {
+                    if(val) {
+                        let btns = document.querySelectorAll(`#testPanel .options[data-qidx="${qi}"] .test-option`);
+                        btns.forEach(btn => { if(btn.dataset.val == val) btn.classList.add('active'); });
+                    }
+                });
+            }
+        }
+        document.querySelectorAll('#testTabs button').forEach((btn,i)=> btn.onclick=()=>loadTest(i));
+        loadTest(0);
+        document.getElementById('submitTestBtn').onclick = () => {
+            let ans = testAnswers[currentTestIdx];
+            let mod = testModules[currentTestIdx];
+            let required = mod.questions.length;
+            if(!ans || ans.length<required || ans.some(a=>!a)) { alert("请完成所有题目"); return; }
+            let resultText = "";
+            if(mod.optionsType === "scale") {
+                let sum = ans.reduce((a,b)=>a+parseInt(b),0);
+                resultText = mod.resultMap(sum);
+            } else {
+                resultText = mod.resultMap(ans);
+            }
+            document.getElementById('testResultMsg').innerHTML = `${mod.name}测评完成！结果：${resultText} +25XP`;
+            addXP(25, `${mod.name}测评`);
+        };
+        document.getElementById('resetCareerTestBtn').onclick = () => { if(confirm("重置所有职业测试数据？")) { testAnswers = {}; loadTest(0); document.getElementById('testResultMsg').innerHTML = ''; addChatMsg("职业测试数据已重置", false); } };
+    }
+
+    // ======================= AI面试官 =======================
+    let aiQList = [
+        { text:"请解释什么是过拟合，以及在信用评分卡中如何避免？", keywords:["过拟合","正则化","交叉验证"] },
+        { text:"如何使用机器学习预测股票波动率？", keywords:["波动率","GARCH","LSTM"] },
+        { text:"描述一个你用过的AI财经工具，并说明如何辅助决策。", keywords:["Python","数据分析","模型"] }
+    ];
+    let aiIdx = 0;
+    function renderAiInterview() {
+        let container = document.getElementById('aiInterviewView');
+        container.innerHTML = `<h2>AI面试官（严格评分） <button id="resetAiInterviewBtn" class="btn-reset">🗑️ 重置</button></h2><div class="card"><div id="aiInterviewQuestion"></div><textarea id="aiAnswer" rows="4" placeholder="你的回答..." style="width:100%; margin:16px 0; border-radius:24px; padding:12px; border:1px solid #cbdde9;"></textarea><button id="submitAiAnswer" class="btn-primary">提交答案</button><div id="aiScoreDisplay" style="margin-top:12px;"></div><button id="nextAiQuestion" class="btn-primary">下一题</button></div>`;
+        function loadQ() { document.getElementById('aiInterviewQuestion').innerHTML = `<strong>面试官:</strong> ${aiQList[aiIdx].text}<div class="hint-text">💡 请围绕关键词回答</div>`; document.getElementById('aiAnswer').value=''; document.getElementById('aiScoreDisplay').innerHTML=''; }
+        document.getElementById('submitAiAnswer').onclick = () => {
+            let ans = document.getElementById('aiAnswer').value.trim().toLowerCase();
+            if(!ans) return;
+            let kw = aiQList[aiIdx].keywords;
+            let found = kw.filter(k=>ans.includes(k)).length;
+            let score = Math.min(100, Math.floor((found/kw.length)*80)+20);
+            document.getElementById('aiScoreDisplay').innerHTML = `✨ 得分: ${score}/100<br>${score<60?"缺少专业关键词":score<80?"可补充案例":"优秀！"}`;
+            addXP(Math.floor(score/10), "AI面试");
+        };
+        document.getElementById('nextAiQuestion').onclick = () => { aiIdx=(aiIdx+1)%aiQList.length; loadQ(); };
+        loadQ();
+        document.getElementById('resetAiInterviewBtn').onclick = () => { aiIdx=0; loadQ(); addChatMsg("AI面试官已重置", false); };
+    }
+
+    // ======================= 技能树 =======================
+    let skillLevels = JSON.parse(localStorage.getItem('skillLevels')) || { Python:2, SQL:1, ML:1, DL:0, Quant:0, Finance:2 };
+    function renderSkillTree() {
+        let skills = [
+            { name:"Python数据分析", key:"Python", max:5, actions:["学pandas","数据清洗项目","Kaggle竞赛"] },
+            { name:"SQL数据库", key:"SQL", max:5, actions:["SQL教程","LeetCode练习"] },
+            { name:"机器学习", key:"ML", max:5, actions:["吴恩达课程","信用评分卡"] },
+            { name:"深度学习/LLM", key:"DL", max:5, actions:["HuggingFace","微调模型"] },
+            { name:"量化交易", key:"Quant", max:5, actions:["聚宽平台","双均线策略"] },
+            { name:"财报分析", key:"Finance", max:5, actions:["读年报","财务比率分析"] }
+        ];
+        let container = document.getElementById('skillTreeView');
+        container.innerHTML = `<h2>AI+财经技能树 <button id="resetSkillTreeBtn" class="btn-reset">🗑️ 重置清零</button></h2><div class="card">${skills.map(s=>`<div style="margin-bottom:20px;"><div class="flex-between"><strong>${s.name}</strong><span>${skillLevels[s.key]}/${s.max}</span></div><div class="progress-bar-sm"><div class="progress-fill-sm" style="width:${(skillLevels[s.key]/s.max)*100}%"></div></div><button class="btn-primary skill-action-btn" data-actions='${JSON.stringify(s.actions)}'>查看学习路径</button></div>`).join('')}</div>`;
+        document.querySelectorAll('.skill-action-btn').forEach(btn => {
+            btn.onclick = () => { let acts = JSON.parse(btn.dataset.actions); alert(`📌 学习路径:\n${acts.join('\n')}`); };
+        });
+        document.getElementById('resetSkillTreeBtn').onclick = () => {
+            if(confirm("重置技能树？")) { Object.keys(skillLevels).forEach(k => skillLevels[k] = 0); localStorage.setItem('skillLevels', JSON.stringify(skillLevels)); renderSkillTree(); addChatMsg("技能树已重置", false); }
+        };
+    }
+
+    // ======================= AI私教（文件上传+API分析） =======================
+    async function callDeepSeek(messages) {
+        if(!DEEPSEEK_KEY) throw new Error("未配置API Key");
+        let res = await fetch('https://api.deepseek.com/v1/chat/completions', {
+            method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${DEEPSEEK_KEY}`},
+            body:JSON.stringify({ model:'deepseek-chat', messages, temperature:0.5 })
+        });
+        if(!res.ok) throw new Error(`API ${res.status}`);
+        let data = await res.json();
+        return data.choices[0].message.content;
+    }
+    async function analyzeFileWithAPI(content, fileName) {
+        const prompt = `请分析以下文件内容（文件名：${fileName}），生成结构化思维导图（Markdown列表）和能力短板分析。\n内容：${content.substring(0,2000)}`;
+        try { return await callDeepSeek([{ role:'user', content:prompt }]); } catch(e){ return `分析失败：${e.message}`; }
+    }
+    function renderAiPrivate() {
+        let container = document.getElementById('aiPrivateView');
+        container.innerHTML = `<h2>AI私教 · 个性化分析 <button id="resetAiPrivateBtn" class="btn-reset">🗑️ 重置</button></h2><div class="card"><div id="privateUpload" style="border:2px dashed #cbd5e1; border-radius:24px; padding:24px; text-align:center; cursor:pointer;">📁 点击上传文件（作业/简历）</div><div id="privateResult" style="margin-top:16px;"></div></div>`;
+        let fileInput = document.createElement('input'); fileInput.type='file'; fileInput.accept='.txt,.pdf,.docx,.xlsx'; fileInput.style.display='none';
+        document.getElementById('privateUpload').appendChild(fileInput);
+        document.getElementById('privateUpload').onclick = () => fileInput.click();
+        fileInput.onchange = async (e) => {
+            let file = e.target.files[0];
+            if(!file) return;
+            let resultDiv = document.getElementById('privateResult');
+            resultDiv.innerHTML = '解析中...';
+            let content = "";
+            try {
+                if(file.name.endsWith('.txt')) content = await file.text();
+                else if(file.name.endsWith('.pdf')) {
+                    let ab = await file.arrayBuffer();
+                    let pdf = await pdfjsLib.getDocument({data:ab}).promise;
+                    let texts = [];
+                    for(let i=1;i<=Math.min(pdf.numPages,5);i++) {
+                        let page = await pdf.getPage(i);
+                        let text = await page.getTextContent();
+                        texts.push(text.items.map(t=>t.str).join(' '));
+                    }
+                    content = texts.join('\n');
+                } else if(file.name.endsWith('.docx')) {
+                    let ab = await file.arrayBuffer();
+                    let res = await mammoth.extractRawText({arrayBuffer:ab});
+                    content = res.value;
+                } else if(file.name.endsWith('.xlsx')) {
+                    let ab = await file.arrayBuffer();
+                    let wb = XLSX.read(ab);
+                    let sheet = wb.Sheets[wb.SheetNames[0]];
+                    content = XLSX.utils.sheet_to_csv(sheet);
+                }
+            } catch(err) { content = "解析失败"; }
+            if(!content || content.length<20) { resultDiv.innerHTML = "内容过少或无法解析"; return; }
+            if(!DEEPSEEK_KEY) { resultDiv.innerHTML = "❌ 未配置API Key，请在设置中配置"; return; }
+            resultDiv.innerHTML = "AI分析中...";
+            const analysis = await analyzeFileWithAPI(content, file.name);
+            resultDiv.innerHTML = `<div style="background:#f8fafc; border-radius:24px; padding:20px; white-space:pre-wrap;">${analysis.replace(/\n/g,'<br>')}</div>`;
+            addXP(20, `AI私教分析 ${file.name}`);
+        };
+        document.getElementById('resetAiPrivateBtn').onclick = () => { document.getElementById('privateResult').innerHTML = ''; addChatMsg("AI私教已重置", false); };
+    }
+
+    // ======================= 任务日历（完整版） =======================
+    let taskData = JSON.parse(localStorage.getItem('calendarTasks')) || {};
+    let currentYearMonth = { year: 2025, month: 5 };
+    function renderTaskCalendar() {
+        let container = document.getElementById('tasksView');
+        container.innerHTML = `<h2>任务日历 <button id="resetCalendarBtn" class="btn-reset">🗑️ 清空所有任务</button></h2><div class="card"><div class="calendar-header"><button id="prevMonthBtn" class="btn-primary">◀ 上月</button><span id="currentYearMonth" style="font-weight:600; font-size:1.2rem;">${currentYearMonth.year}年${currentYearMonth.month}月</span><button id="nextMonthBtn" class="btn-primary">下月 ▶</button></div><div class="calendar-grid" id="calendarGrid"></div><div id="taskDetailModal" class="modal"><div class="modal-content"><span class="close-modal">&times;</span><h3>任务管理</h3><div id="modalDate" style="font-weight:600; margin-bottom:12px;"></div><input type="text" id="modalTaskTitle" placeholder="任务名称" style="width:100%; padding:10px; border-radius:40px; border:1px solid #cbdde9; margin-bottom:12px;"><input type="number" id="modalTaskXP" placeholder="经验值XP" value="10" style="width:100%; padding:10px; border-radius:40px; border:1px solid #cbdde9; margin-bottom:12px;"><button id="addTaskModalBtn" class="btn-primary">➕ 添加任务</button><div id="modalTaskList" style="margin-top:20px;"></div><div class="hint-text">💡 勾选任务可立即获得XP</div></div></div></div>`;
+        function renderCalendarGrid() {
+            let year = currentYearMonth.year, month = currentYearMonth.month;
+            let firstDay = new Date(year, month-1, 1).getDay();
+            let daysInMonth = new Date(year, month, 0).getDate();
+            let grid = document.getElementById('calendarGrid');
+            grid.innerHTML = '';
+            let weekdays = ['日','一','二','三','四','五','六'];
+            weekdays.forEach(d => { let dayDiv = document.createElement('div'); dayDiv.className = 'calendar-weekday'; dayDiv.innerText = d; grid.appendChild(dayDiv); });
+            for(let i=0; i<firstDay; i++) { let empty = document.createElement('div'); empty.className = 'calendar-day'; empty.style.background = '#fafafa'; grid.appendChild(empty); }
+            for(let d=1; d<=daysInMonth; d++) {
+                let dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                let tasks = taskData[dateStr] || [];
+                let dayDiv = document.createElement('div'); dayDiv.className = 'calendar-day';
+                dayDiv.innerHTML = `<div class="day-number">${d}</div><div class="task-indicators">${tasks.slice(0,3).map(t=>`<span class="task-dot" title="${t.title} (+${t.xp} XP)"></span>`).join('')}${tasks.length>3?'...':''}</div>`;
+                dayDiv.onclick = (e) => { e.stopPropagation(); openTaskModal(dateStr, tasks); };
+                grid.appendChild(dayDiv);
+            }
+        }
+        function openTaskModal(date, tasks) {
+            let modal = document.getElementById('taskDetailModal');
+            let modalDate = document.getElementById('modalDate');
+            modalDate.innerText = `日期: ${date}`;
+            let taskListDiv = document.getElementById('modalTaskList');
+            function renderTaskList() {
+                let currentTasks = taskData[date] || [];
+                taskListDiv.innerHTML = currentTasks.map((t,idx) => `<div class="flex-between" style="margin-bottom:12px; background:#f8fafc; padding:8px 12px; border-radius:24px;"><span><input type="checkbox" data-idx="${idx}" ${t.completed?'checked':''}> ${t.title} (+${t.xp} XP)</span><button class="delete-task-btn" data-idx="${idx}" style="background:none; border:none; color:#b91c1c; cursor:pointer;">🗑️</button></div>`).join('');
+                document.querySelectorAll('.delete-task-btn').forEach(btn => {
+                    btn.onclick = () => { let idx = parseInt(btn.dataset.idx); taskData[date].splice(idx,1); if(taskData[date].length===0) delete taskData[date]; localStorage.setItem('calendarTasks', JSON.stringify(taskData)); renderTaskList(); renderCalendarGrid(); };
+                });
+                document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                    cb.onchange = (e) => { let idx = parseInt(cb.dataset.idx); if(cb.checked && !taskData[date][idx].completed) { taskData[date][idx].completed = true; addXP(taskData[date][idx].xp, taskData[date][idx].title); localStorage.setItem('calendarTasks', JSON.stringify(taskData)); renderTaskList(); renderCalendarGrid(); } };
+                });
+            }
+            document.getElementById('addTaskModalBtn').onclick = () => {
+                let title = document.getElementById('modalTaskTitle').value.trim();
+                let xp = parseInt(document.getElementById('modalTaskXP').value);
+                if(!title) return;
+                if(!taskData[date]) taskData[date] = [];
+                taskData[date].push({ title, xp, completed: false });
+                localStorage.setItem('calendarTasks', JSON.stringify(taskData));
+                document.getElementById('modalTaskTitle').value = '';
+                document.getElementById('modalTaskXP').value = '10';
+                renderTaskList();
+                renderCalendarGrid();
+            };
+            renderTaskList();
+            modal.style.display = 'flex';
+            modal.querySelector('.close-modal').onclick = () => modal.style.display = 'none';
+            window.onclick = (e) => { if(e.target === modal) modal.style.display = 'none'; };
+        }
+        renderCalendarGrid();
+        document.getElementById('prevMonthBtn').onclick = () => { let newMonth = currentYearMonth.month - 1, newYear = currentYearMonth.year; if(newMonth < 1) { newMonth = 12; newYear--; } currentYearMonth = { year: newYear, month: newMonth }; document.getElementById('currentYearMonth').innerText = `${currentYearMonth.year}年${currentYearMonth.month}月`; renderCalendarGrid(); };
+        document.getElementById('nextMonthBtn').onclick = () => { let newMonth = currentYearMonth.month + 1, newYear = currentYearMonth.year; if(newMonth > 12) { newMonth = 1; newYear++; } currentYearMonth = { year: newYear, month: newMonth }; document.getElementById('currentYearMonth').innerText = `${currentYearMonth.year}年${currentYearMonth.month}月`; renderCalendarGrid(); };
+        document.getElementById('resetCalendarBtn').onclick = () => { if(confirm("清空所有日历任务？")) { taskData = {}; localStorage.setItem('calendarTasks', JSON.stringify(taskData)); renderCalendarGrid(); addChatMsg("所有日历任务已清空", false); } };
+    }
+
+    // ======================= 聊天 & API 初始化 =======================
+    let chatHistory = [];
+    async function sendToAI(msg) {
+        addChatMsg(msg, true);
+        chatHistory.push({ role:'user', content:msg });
+        let loading = addLoadingMsg();
+        try {
+            let reply;
+            if(DEEPSEEK_KEY) reply = await callDeepSeek(chatHistory.slice(-6));
+            else reply = `[模拟] 未配置API Key。您问: ${msg}`;
+            chatHistory.push({ role:'assistant', content:reply });
+            removeLoadingMsg(loading);
+            addChatMsg(reply, false);
+        } catch(e) { removeLoadingMsg(loading); addChatMsg(`错误: ${e.message}`, false); }
+    }
+    function addChatMsg(txt, isUser) {
+        let div = document.getElementById('chatMsgs');
+        let msgDiv = document.createElement('div');
+        msgDiv.style.marginBottom='12px';
+        msgDiv.style.textAlign = isUser ? 'right' : 'left';
+        msgDiv.innerHTML = `<div style="display:inline-block; background:${isUser?'#1e3c5c':'#eef3fc'}; color:${isUser?'white':'black'}; border-radius:20px; padding:8px 14px;">${txt}</div>`;
+        div.appendChild(msgDiv);
+        div.scrollTop = div.scrollHeight;
+    }
+    function addLoadingMsg() { let d = document.createElement('div'); d.innerHTML='🤖 思考中...'; document.getElementById('chatMsgs').appendChild(d); return d; }
+    function removeLoadingMsg(el) { if(el) el.remove(); }
+    document.getElementById('sendChatMsgBtn').onclick = () => { let inp = document.getElementById('chatInput'); if(inp.value.trim()) sendToAI(inp.value); inp.value=''; };
+    document.getElementById('chatFab').onclick = () => document.getElementById('chatWindow').classList.toggle('open');
+    document.getElementById('settingsFab').onclick = () => document.getElementById('settingsPanel').classList.toggle('open');
+    document.getElementById('saveApiBtn').onclick = () => {
+        let key = document.getElementById('apiKeyInput').value.trim();
+        if(key) { DEEPSEEK_KEY = key; localStorage.setItem('deepseek_key', key); alert("API Key已保存"); }
+        else { DEEPSEEK_KEY = ''; localStorage.removeItem('deepseek_key'); alert("已清除"); }
+        document.getElementById('settingsPanel').classList.remove('open');
+    };
+    if(DEEPSEEK_KEY) document.getElementById('apiKeyInput').value = DEEPSEEK_KEY;
+    let saved = localStorage.getItem('fin_data');
+    if(saved) { let d = JSON.parse(saved); totalXP = d.totalXP || 0; currentCareer = d.currentCareer || "首席AI经济学家"; milestones = d.milestones || milestones; }
+    let savedSkill = localStorage.getItem('skillLevels');
+    if(savedSkill) skillLevels = JSON.parse(savedSkill);
+    updateUI();
+</script>
+</body>
+</html>
